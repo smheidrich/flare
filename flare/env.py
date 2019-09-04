@@ -5,7 +5,8 @@ from flare.struc import Structure
 
 
 class AtomicEnvironment:
-    def __init__(self, structure: Structure, atom: int, cutoffs):
+    def __init__(self, structure: Structure, atom: int, cutoffs,
+                 compute_angles=False):
         """
         Class defining atomic environment to serve as argument to GP kernel.
 
@@ -32,12 +33,16 @@ class AtomicEnvironment:
         # if multiple cutoffs are given, create 3-body arrays
         if len(cutoffs) > 1:
             self.cutoff_3 = cutoffs[1]
-            bond_array_3, cross_bond_inds, cross_bond_dists, triplet_counts =\
-                get_3_body_arrays(bond_array_2, bond_positions_2, cutoffs[1])
+            bond_array_3, cross_bond_inds, cross_bond_dists, triplet_counts,\
+                cos_thetas = get_3_body_arrays(bond_array_2, bond_positions_2,
+                                               cutoffs[1])
             self.bond_array_3 = bond_array_3
             self.cross_bond_inds = cross_bond_inds
             self.cross_bond_dists = cross_bond_dists
             self.triplet_counts = triplet_counts
+
+            if compute_angles:
+                self.cos_thetas = cos_thetas
 
     def to_dict(self):
         """
@@ -80,7 +85,7 @@ class AtomicEnvironment:
         n_neighbors = len(self.bond_array_2)
         string = 'Atomic Env. of Type {} surrounded by {} atoms of Types {}' \
                  ''.format(atom_type, n_neighbors,
-                    sorted(list(set(neighbor_types))))
+                           sorted(list(set(neighbor_types))))
 
         return string
 
@@ -161,13 +166,18 @@ def get_3_body_arrays(bond_array_2: np.ndarray,
     # get cross bond array
     cross_bond_inds = np.zeros((ind_3, ind_3), dtype=np.int8)-1
     cross_bond_dists = np.zeros((ind_3, ind_3))
+    cos_thetas = np.zeros((ind_3, ind_3))
     triplet_counts = np.zeros(ind_3, dtype=np.int8)
     for m in range(ind_3):
         pos1 = bond_positions_3[m]
+        dist1 = bond_array_3[m, 0]
         count = m+1
         trips = 0
         for n in range(m+1, ind_3):
             pos2 = bond_positions_3[n]
+            dist2 = bond_array_3[n, 0]
+            pos_dot = pos1[0]*pos2[0] + pos1[1]*pos2[1] + pos1[2]*pos2[2]
+            cos_thetas[m, n] = pos_dot / (dist1 * dist2)
             diff = pos2 - pos1
             dist_curr = sqrt(diff[0]*diff[0]+diff[1]*diff[1]+diff[2]*diff[2])
 
@@ -178,7 +188,8 @@ def get_3_body_arrays(bond_array_2: np.ndarray,
                 trips += 1
         triplet_counts[m] = trips
 
-    return bond_array_3, cross_bond_inds, cross_bond_dists, triplet_counts
+    return bond_array_3, cross_bond_inds, cross_bond_dists, triplet_counts, \
+        cos_thetas
 
 
 if __name__ == '__main__':
