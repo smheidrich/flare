@@ -22,7 +22,8 @@ class Structure(object):
     """
 
     def __init__(self, cell, species, positions, mass_dict=None,
-                 prev_positions=None, species_labels=None):
+                 prev_positions=None, species_labels=None, energy=None,
+                 forces=None, stress=None):
         self.cell = cell
         self.vec1 = cell[0, :]
         self.vec2 = cell[1, :]
@@ -55,9 +56,11 @@ class Structure(object):
                                                           'same length'
             self.prev_positions = prev_positions
 
-        self.energy = None
-        self.stress = None
-        self.forces = np.zeros((len(positions), 3))
+        self.energy = energy
+        self.forces = forces
+        self.stress = stress
+        self.labels = self.get_labels()
+
         self.stds = np.zeros((len(positions), 3))
         self.mass_dict = mass_dict
 
@@ -117,6 +120,23 @@ class Structure(object):
                                         self.cell_dot)
 
         self.wrapped_positions = pos_wrap
+
+    def get_labels(self):
+        labels = []
+        if self.energy is not None:
+            labels.append(self.energy)
+        if self.forces is not None:
+            unrolled_forces = self.forces.reshape(-1)
+            for force_comp in unrolled_forces:
+                labels.append(force_comp)
+        if self.stress is not None:
+            labels.extend([self.stress[0, 0], self.stress[0, 1],
+                           self.stress[0, 2], self.stress[1, 1],
+                           self.stress[1, 2], self.stress[2, 2]])
+
+        labels = np.array(labels)
+
+        return labels
 
 
 def get_unique_species(species):
