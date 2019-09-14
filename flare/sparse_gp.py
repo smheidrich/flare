@@ -34,7 +34,8 @@ class SparseGP:
         k_mm_updated[:prev_mm_size, :prev_mm_size] = self.k_mm
 
         for count, sparse_env in enumerate(self.sparse_environments):
-            energy_kern = self.environment_kernel(atomic_env, sparse_env)
+            energy_kern = self.environment_kernel(atomic_env, sparse_env,
+                                                  self.kernel_hyps)
             k_mm_updated[prev_mm_size, count] = energy_kern
             k_mm_updated[count, prev_mm_size] = energy_kern
 
@@ -46,7 +47,8 @@ class SparseGP:
 
         index = 0
         for train_struc in self.training_structures:
-            struc_kern = self.structure_kernel(atomic_env, train_struc)
+            struc_kern = self.structure_kernel(atomic_env, train_struc,
+                                               self.kernel_hyps)
             kern_len = len(struc_kern)
             k_nm_updated[index:index+kern_len, prev_nm_size[1]+1] = \
                 struc_kern
