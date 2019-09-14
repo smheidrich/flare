@@ -1,9 +1,10 @@
 import numpy as np
 import time
+import pytest
 from flare import struc, env
 from flare import otf_parser
 from flare.mff.mff_mc import MappedForceField
-from mc_kernels import mc_simple
+from flare import mc_simple
 from flare.lammps import lammps_calculator
 import pickle
 import os
@@ -11,6 +12,11 @@ import os
 
 # ASSUMPTION: You have a Lammps executable with the mff pair style with $lmp
 # as the corresponding environment variable.
+@pytest.mark.skipif(not os.environ.get('lmp',
+                          False), reason='lmp not found '
+                                  'in environment: Please install LAMMPS '
+                                  'and set the $lmp env. '
+                                  'variable to point to the executatble.')
 def test_parse_header():
     # -------------------------------------------------------------------------
     #                  reconstruct gp model from otf snippet
@@ -102,23 +108,32 @@ def test_parse_header():
     forces = otf_object.force_list[-1]
     structure = struc.Structure(otf_cell, species, positions)
 
-    # compute forces on structure with lammps potential
-    style_string = 'mff'
-    coeff_string = '* * {} 47 53 yes yes'.format(lammps_location)
-    lammps_folder = '.'
-    lammps_executable = '$lmp'
-
     atom_types = [1, 2]
     atom_masses = [108, 127]
     atom_species = [1, 2] * 27
 
-    lammps_calc = \
-        lammps_calculator.Lammps_Calculator(structure, style_string,
-                                            coeff_string, lammps_folder,
-                                            lammps_executable, atom_types,
-                                            atom_masses, atom_species)
+    # create data file
+    data_file_name = 'tmp.data'
+    data_text = lammps_calculator.lammps_dat(structure, atom_types,
+                                             atom_masses, atom_species)
+    lammps_calculator.write_text(data_file_name, data_text)
 
-    lammps_forces = lammps_calc.get_forces()
+    # create lammps input
+    style_string = 'mff'
+    coeff_string = '* * {} 47 53 yes yes'.format(lammps_location)
+    lammps_executable = '$lmp'
+    dump_file_name = 'tmp.dump'
+    input_file_name = 'tmp.in'
+    output_file_name = 'tmp.out'
+    input_text = \
+        lammps_calculator.generic_lammps_input(data_file_name, style_string,
+                                               coeff_string, dump_file_name)
+    lammps_calculator.write_text(input_file_name, input_text)
+
+    lammps_calculator.run_lammps(lammps_executable, input_file_name,
+                                 output_file_name)
+
+    lammps_forces = lammps_calculator.lammps_parser(dump_file_name)
 
     # check that lammps agrees with gp to within 1 meV/A
     assert(np.abs(lammps_forces[0, 1] - forces[0, 1]) < 1e-3)
