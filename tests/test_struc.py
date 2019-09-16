@@ -117,3 +117,19 @@ def test_rep_methods(varied_test_struc):
 
     thestr = str(varied_test_struc)
     assert 'Structure with 10 atoms of types {' in thestr
+
+
+def test_struc_labels():
+    cell = np.random.rand(3, 3)
+    noa = 10
+    positions = np.random.rand(noa, 3)
+    species = ['Al'] * len(positions)
+
+    energy = np.random.rand()
+    forces = np.random.rand(noa, 3)
+
+    test_struc = Structure(cell, species, positions,
+                           energy=energy, forces=forces)
+
+    assert(energy == test_struc.labels[0])
+    assert(forces[-1][-2] == test_struc.labels[-2])
