@@ -17,10 +17,14 @@ class SparseGP:
 
         self.k_mm = np.zeros(0)
         self.k_nm = np.zeros(0)
-        self.lam = np.zeros(0)
+        self.noise_matrix = np.zeros(0)
+        self.training_labels = np.zeros(0)
+        self.alpha = np.zeros(0)
 
     def add_sparse_point(self, atomic_env):
-        """Adds a sparse point to the GP model.
+        """Adds a sparse point to the GP model. Adds a row and column to the \
+sparse covariance matrix K_mm and a column to the dataset covariance matrix \
+K_nm.
 
         :param atomic_env: Atomic environment of the sparse point.
         :type atomic_env: env.AtomicEnvironment
@@ -28,27 +32,29 @@ class SparseGP:
         # update list of sparse environments
         self.sparse_environments.append(atomic_env)
 
-        # update k_mm
+        # add a row and column to k_mm
         prev_mm_size = self.k_mm.shape[0]
         k_mm_updated = np.zeros((prev_mm_size+1, prev_mm_size+1))
         k_mm_updated[:prev_mm_size, :prev_mm_size] = self.k_mm
 
         for count, sparse_env in enumerate(self.sparse_environments):
             energy_kern = self.environment_kernel(atomic_env, sparse_env,
-                                                  self.kernel_hyps)
+                                                  self.kernel_hyps,
+                                                  self.cutoffs)
             k_mm_updated[prev_mm_size, count] = energy_kern
             k_mm_updated[count, prev_mm_size] = energy_kern
 
         self.k_mm = k_mm_updated
 
-        # update k_nm
+        # add a column to k_nm
         prev_nm_size = self.k_nm.shape
         k_nm_updated = np.zeros((prev_nm_size[0], prev_nm_size[1] + 1))
 
         index = 0
         for train_struc in self.training_structures:
             struc_kern = self.structure_kernel(atomic_env, train_struc,
-                                               self.kernel_hyps)
+                                               self.kernel_hyps,
+                                               self.cutoffs)
             kern_len = len(struc_kern)
             k_nm_updated[index:index+kern_len, prev_nm_size[1]+1] = \
                 struc_kern
@@ -66,10 +72,40 @@ class SparseGP:
         # update list of training structures
         self.training_structures.append(structure)
 
+        # update training labels
+        self.training_labels = np.append(self.training_labels,
+                                         structure.labels)
+
+        # update noise matrix
+        self.update_noise_matrix(structure)
+
         # update k_nm
+        # number of rows added equals the number of labels on the structure
         prev_nm_size = self.k_nm.shape
+        label_size = len(structure.labels)
+        k_nm_updated = np.zeros((prev_nm_size + label_size, prev_nm_size))
+        k_nm_updated[:prev_nm_size[0], :prev_nm_size[1]] = self.k_nm
 
-        # TODO: add len method to struc to conveniently get the number of
-        # training labels corresponding to that structure
+        for count, sparse_env in enumerate(self.sparse_environments):
+            struc_kern = self.structure_kernel(sparse_env, structure,
+                                               self.kernel_hyps, self.cutoffs)
+            k_nm_updated[prev_nm_size[0]:, count] = struc_kern
 
-        # k_nm_updated = np.zeros((prev_nm_size[0], prev_nm_size[1]))
+        self.k_nm = k_nm_updated
+
+    def update_noise_matrix(self, structure):
+        noise_flattened = np.diag(self.noise_matrix)
+
+        if structure.energy is not None:
+            noise_flattened = np.append(noise_flattened, self.noise_hyps[0])
+
+        if structure.forces is not None:
+            force_noise = np.array([self.noise_hyps[1] * 3 * structure.nat])
+            noise_flattened = np.append(noise_flattened, force_noise)
+
+        self.noise_matrix = np.diag(noise_flattened)
+
+    def set_alpha(self):
+        """Computes alpha using the current covariance and noise matrices."""
+
+        pass
