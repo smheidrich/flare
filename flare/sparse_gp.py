@@ -108,4 +108,28 @@ K_nm.
     def set_alpha(self):
         """Computes alpha using the current covariance and noise matrices."""
 
-        pass
+        mat1 = np.matmul(np.transpose(self.k_nm), self.noise_matrix)
+        mat2 = np.matmul(mat1, self.k_nm)
+        mat3 = np.linalg.inv(self.k_mm + mat2)
+        mat4 = np.matmul(mat1, self.training_labels)
+
+        return np.matmul(mat3, mat4)
+
+    def predict_on_structure(self, structure):
+        """Predict energy and forces of a structure with the current sparse \
+GP model."""
+
+        # set structure labels to true to compute kernels
+        structure.energy = True
+        structure.forces = True
+
+        kernel_array = np.zeros(len(self.sparse_environments),
+                                1 + 3 * structure.nat)
+        for count, sparse_env in enumerate(self.sparse_environments):
+            kernel_array[count] = \
+                self.structure_kernel(sparse_env, structure, self.kernel_hyps,
+                                      self.cutoffs)
+
+        prediction = np.matmul(self.alpha, kernel_array)
+
+        return prediction
