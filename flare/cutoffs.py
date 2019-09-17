@@ -35,3 +35,11 @@ def cosine_cutoff(r_cut, ri, ci, d=1):
         fdi = 0
 
     return fi, fdi
+
+
+@njit
+def all_cosine(r_cut, ri, ci):
+    fi = (1/2) * (cos((pi * ri) / r_cut) + 1)
+    fdi = (pi/(2 * r_cut)) * sin((pi * ri) / r_cut) * ci
+
+    return fi, fdi
