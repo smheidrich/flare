@@ -37,3 +37,27 @@ def test_env_methods():
 
     assert np.array_equal(remade_env.bond_array_2, env_test.bond_array_2)
     assert np.array_equal(remade_env.bond_array_3, env_test.bond_array_3)
+
+def test_cos():
+    """Test that cosines are correctly stored."""
+
+    cell = np.eye(3) * 100
+    species = np.array([1, 1, 1, 1, 1])
+    positions = np.random.rand(5, 3)
+
+    cutoffs = np.array([10, 10])
+    structure = struc.Structure(cell, species, positions)
+    test_env = env.AtomicEnvironment(structure, 0, cutoffs,
+                                     compute_angles=True)
+
+    atom1 = 1
+    atom2 = 3
+
+    atom1_rel = positions[atom1] - positions[0]
+    atom1_dist = np.linalg.norm(atom1_rel)
+    atom2_rel = positions[atom2] - positions[0]
+    atom2_dist = np.linalg.norm(atom2_rel)
+
+    ang = np.dot(atom1_rel, atom2_rel) / (atom1_dist * atom2_dist)
+
+    assert(np.isclose(ang, test_env.cos_thetas[atom1, atom2]))
