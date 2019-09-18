@@ -47,7 +47,7 @@ class AtomicEnvironment:
             if compute_angles:
                 self.cos_thetas = cos_thetas
 
-    def to_dict(self):
+    def as_dict(self):
         """
         Returns Atomic Environment object as a dictionary for serialization
         purposes. Does not include the structure to avoid redundant

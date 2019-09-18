@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from flare import env, struc
 from flare.struc import Structure
 from flare.env import AtomicEnvironment
 
@@ -37,6 +38,7 @@ def test_env_methods():
 
     assert np.array_equal(remade_env.bond_array_2, env_test.bond_array_2)
     assert np.array_equal(remade_env.bond_array_3, env_test.bond_array_3)
+
 
 def test_cos():
     """Test that cosines are correctly stored."""
