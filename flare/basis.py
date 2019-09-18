@@ -1,12 +1,33 @@
 """Basis functions for many body kernels."""
 import numpy as np
 from numba import njit
+from math import exp, cos, pi
 
 
 # -----------------------------------------------------------------------------
 #                               radial functions
 # -----------------------------------------------------------------------------
 
+@njit
+def behler_radial(r_ij, n, n_total, sigma, r_cut):
+    """Returns a radial symmetry function and its derivative. The basis \
+consists of n equispaced Gaussians with standard deviation sigma whose means \
+range from 0 to r_cut. A smooth cosine envelope is applied to eliminate \
+discontinuous behavior when atoms enter or exit the cutoff sphere.
+
+See Behler, Jörg, and Michele Parrinello. PRL 98.14 (2007): 146401."""
+
+    gauss_mean = (n / (n_total - 1)) * r_cut
+    gauss_arg = ((r_ij - gauss_mean)**2) / (2 * sigma * sigma)
+    gauss_val = exp(gauss_arg)
+    gauss_derv = gauss_val * (r_ij - gauss_mean) / (sigma * sigma)
+
+    cos_val = (1/2) * (cos(pi * r_ij / r_cut) + 1)
+    basis_val = gauss_val * cos_val
+
+    # TODO implement derivative
+
+    return basis_val
 
 # -----------------------------------------------------------------------------
 #                              angular functions
