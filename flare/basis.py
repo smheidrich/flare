@@ -1,7 +1,7 @@
 """Basis functions for many body kernels."""
 import numpy as np
 from numba import njit
-from math import exp, cos, pi
+from math import exp, cos, sin, pi
 
 
 # -----------------------------------------------------------------------------
@@ -23,11 +23,13 @@ See Behler, Jörg, and Michele Parrinello. PRL 98.14 (2007): 146401."""
     gauss_derv = gauss_val * (r_ij - gauss_mean) / (sigma * sigma)
 
     cos_val = (1/2) * (cos(pi * r_ij / r_cut) + 1)
+    cos_derv = -pi * sin(pi * r_ij / r_cut) / (2 * r_cut)
+
     basis_val = gauss_val * cos_val
+    basis_derv = gauss_derv * cos_val + gauss_val * cos_derv
 
-    # TODO implement derivative
+    return basis_val, basis_derv
 
-    return basis_val
 
 # -----------------------------------------------------------------------------
 #                              angular functions
