@@ -36,6 +36,28 @@ See Behler, Jörg, and Michele Parrinello. PRL 98.14 (2007): 146401."""
 # -----------------------------------------------------------------------------
 
 @njit
+def cos_grad(cos_theta, bond_vec_j, bond_vec_k):
+    """Compute gradient of cos(theta_ijk) with respect to the Cartesian \
+coordinates of atoms i, j, and k."""
+
+    grad_vals = np.zeros((3, 3))
+    cos_term_j = (cos_theta / bond_vec_j[0]) - (1 / bond_vec_k[0])
+    cos_term_k = (cos_theta / bond_vec_k[0]) - (1 / bond_vec_j[0])
+
+    for n in range(3):
+        grad_vals[0, n] = \
+            bond_vec_j[n+1] * cos_term_j + bond_vec_k[n+1] * cos_term_k
+
+        grad_vals[1, n] = bond_vec_j[n+1] / bond_vec_k[0] - \
+            bond_vec_k[n+1] * cos_theta / bond_vec_k[0]
+
+        grad_vals[2, n] = bond_vec_k[n+1] / bond_vec_j[0] - \
+            bond_vec_j[n+1] * cos_theta / bond_vec_j[0]
+
+    return grad_vals
+
+
+@njit
 def legendre(n, x):
     """Returns Legendre polynomial and first derivative."""
 
@@ -98,4 +120,44 @@ def legendre(n, x):
     return val, derv
 
 if __name__ == '__main__':
-    pass
+    from flare import struc, env
+    from copy import deepcopy
+
+    cell = np.eye(3) * 100
+    species = np.array([1, 1, 1])
+    positions = np.random.rand(3, 3)
+    delt = 1e-8
+    cutoffs = np.array([10, 10])
+    structure = struc.Structure(cell, species, positions)
+    test_env = env.AtomicEnvironment(structure, 0, cutoffs,
+                                     compute_angles=True)
+
+    # perturb central atom
+    pos_delt_1 = deepcopy(positions)
+    coord_1 = np.random.randint(0, 3)
+    pos_delt_1[0, coord_1] += delt
+    structure_1 = struc.Structure(cell, species, pos_delt_1)
+    test_env_1 = env.AtomicEnvironment(structure_1, 0, cutoffs,
+                                       compute_angles=True)
+
+    cos_theta = test_env.cos_thetas[0, 1]
+    cos_theta_1 = test_env_1.cos_thetas[0, 1]
+    bond_vec_j = test_env.bond_array_2[0]
+    bond_vec_k = test_env.bond_array_2[1]
+
+    cos_delt_1 = (cos_theta_1 - cos_theta) / delt
+    cos_grad_val = cos_grad(cos_theta, bond_vec_j, bond_vec_k)
+    assert(np.isclose(cos_delt_1, cos_grad_val[0, coord_1]))
+
+    # # perturb environment atom
+    # pos_delt_2 = deepcopy(positions)
+    # pert_atom = np.random.randint(1, 3)
+    # coord_2 = np.random.randint(0, 3)
+    # pos_delt_2[pert_atom, coord_2] += delt
+    # structure_2 = struc.Structure(cell, species, pos_delt_2)
+    # test_env_2 = env.AtomicEnvironment(structure_2, 0, cutoffs,
+    #                                    compute_angles=True)
+
+    # print(cos_delt_1)
+    # print(cos_grad(cos_theta, bond_vec_j, bond_vec_k))
+
