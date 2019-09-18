@@ -1,28 +1,35 @@
 import numpy as np
 from typing import List
-from flare.util import element_to_Z
+from flare.util import element_to_Z, NumpyEncoder
+from json import dumps
 
 
 class Structure(object):
     """
-    Contains information about a structure of atoms, including the periodic cell boundaries and atomic species and coordinates.
+    Contains information about a structure of atoms, including the periodic
+    cell boundaries and atomic species and coordinates.
     
-    :param cell: 3x3 array whose rows are the Bravais lattice vectors of the cell.
+    :param cell: 3x3 array whose rows are the Bravais lattice vectors of the
+    cell.
     :type cell: np.ndarray
-    :param species: List of atomic species, which are represented either as integers or chemical symbols.
+    :param species: List of atomic species, which are represented either as
+    integers or chemical symbols.
     :type species: List
     :param positions: Nx3 array of atomic coordinates.
     :type positions: np.ndarray
     :param mass_dict: Dictionary of atomic masses used in MD simulations.
     :type mass_dict: dict
-    :param prev_positions: Nx3 array of previous atomic coordinates used in MD simulations.
+    :param prev_positions: Nx3 array of previous atomic coordinates used in
+    MD simulations.
     :type prev_positions: np.ndarray
-    :param species_labels: List of chemical symbols. Used in the output file of on-the-fly runs.
+    :param species_labels: List of chemical symbols. Used in the output file
+    of on-the-fly runs.
     :type species_labels: List[str]
     """
 
     def __init__(self, cell, species, positions, mass_dict=None,
-                 prev_positions=None, species_labels=None):
+                 prev_positions=None, species_labels=None, energy=None,
+                 forces=None, stress=None):
         self.cell = cell
         self.vec1 = cell[0, :]
         self.vec2 = cell[1, :]
@@ -39,10 +46,11 @@ class Structure(object):
         self.wrap_positions()
 
         # If species are strings, convert species to integers by atomic number
-        species = [element_to_Z(spec) for spec in species]
-
-        self.coded_species = np.array(species)
-        self.species_labels = species_labels
+        if species_labels is None:
+            self.species_labels = species
+        else:
+            self.species_labels = species_labels
+        self.coded_species = np.array([element_to_Z(spec) for spec in species])
         self.nat = len(species)
 
         # Default: atoms have no velocity
@@ -51,19 +59,22 @@ class Structure(object):
         else:
             assert len(positions) == len(prev_positions), 'Previous ' \
                                                           'positions and ' \
-                                                          'positions are not'\
+                                                          'positions are not' \
                                                           'same length'
             self.prev_positions = prev_positions
 
-        self.energy = None
-        self.stress = None
-        self.forces = np.zeros((len(positions), 3))
+        self.energy = energy
+        self.forces = forces
+        self.stress = stress
+        self.labels = self.get_labels()
+
         self.stds = np.zeros((len(positions), 3))
         self.mass_dict = mass_dict
 
     def get_cell_dot(self):
         """
-        Compute 3x3 array of dot products of cell vectors used to fold atoms back to the unit cell.
+        Compute 3x3 array of dot products of cell vectors used to fold atoms
+        back to the unit cell.
 
         :return: 3x3 array of cell vector dot products.
         :rtype: np.ndarray
@@ -79,13 +90,15 @@ class Structure(object):
 
     @staticmethod
     def raw_to_relative(positions, cell_transpose, cell_dot_inverse):
-        """Convert Cartesian coordinates to relative coordinates expressed in terms of the cell vectors.
+        """Convert Cartesian coordinates to relative coordinates expressed in
+        terms of the cell vectors.
         
         :param positions: Cartesian coordinates.
         :type positions: np.ndarray
         :param cell_transpose: Transpose of the cell array.
         :type cell_transpose: np.ndarray
-        :param cell_dot_inverse: Inverse of the array of dot products of cell vectors.
+        :param cell_dot_inverse: Inverse of the array of dot products of cell
+        vectors.
         :type cell_dot_inverse: np.ndarray
         :return: Relative positions.
         :rtype: np.ndarray
@@ -117,6 +130,66 @@ class Structure(object):
                                         self.cell_dot)
 
         self.wrapped_positions = pos_wrap
+
+    def get_labels(self):
+        labels = []
+        if self.energy is not None:
+            labels.append(self.energy)
+        if self.forces is not None:
+            unrolled_forces = self.forces.reshape(-1)
+            for force_comp in unrolled_forces:
+                labels.append(force_comp)
+        if self.stress is not None:
+            labels.extend([self.stress[0, 0], self.stress[0, 1],
+                           self.stress[0, 2], self.stress[1, 1],
+                           self.stress[1, 2], self.stress[2, 2]])
+
+        labels = np.array(labels)
+
+        return labels
+
+    def indices_of_specie(self, specie: int):
+        """
+        Return the indicies of atoms in  the structure which are atoms
+        corresponding to a given specie
+        :param specie:
+        :return:
+        """
+        return [i for i, spec in enumerate(self.coded_species)
+                if spec == specie]
+
+    # TODO make more descriptive
+    def __str__(self):
+        return 'Structure with {} atoms of types {}'.format(self.nat,
+                                                     set(self.species_labels))
+
+    def __len__(self):
+        return self.nat
+
+    def as_dict(self):
+        """
+        Returns structure as a dictionary for serialization
+        purposes.
+        :return:
+        """
+        return dict(vars(self))
+
+    def as_str(self):
+        return dumps(self.as_dict(), cls=NumpyEncoder)
+
+    @staticmethod
+    def from_dict(dictionary):
+        struc = Structure(cell=np.array(dictionary['cell']),
+                          positions=np.array(dictionary['positions']),
+                          species=dictionary['coded_species'])
+
+        struc.forces = np.array(dictionary['forces'])
+        struc.stress = dictionary['stress']
+        struc.stds = np.array(dictionary['stds'])
+        struc.mass_dict = dictionary['mass_dict']
+        struc.species_labels = dictionary['species_labels']
+
+        return struc
 
 
 def get_unique_species(species):
