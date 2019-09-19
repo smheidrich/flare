@@ -120,47 +120,4 @@ def legendre(n, x):
     return val, derv
 
 if __name__ == '__main__':
-    from flare import struc, env
-    from copy import deepcopy
-
-    cell = np.eye(3) * 100
-    species = np.array([1, 1, 1])
-    positions = np.random.rand(3, 3)
-    delt = 1e-8
-    cutoffs = np.array([10, 10])
-    structure = struc.Structure(cell, species, positions)
-    test_env = env.AtomicEnvironment(structure, 0, cutoffs,
-                                     compute_angles=True)
-
-    # perturb central atom
-    pos_delt_1 = deepcopy(positions)
-    coord_1 = np.random.randint(0, 3)
-    pos_delt_1[0, coord_1] += delt
-    structure_1 = struc.Structure(cell, species, pos_delt_1)
-    test_env_1 = env.AtomicEnvironment(structure_1, 0, cutoffs,
-                                       compute_angles=True)
-
-    cos_theta = test_env.cos_thetas[0, 1]
-    cos_theta_1 = test_env_1.cos_thetas[0, 1]
-    bond_vec_j = test_env.bond_array_2[0]
-    bond_vec_k = test_env.bond_array_2[1]
-
-    cos_delt_1 = (cos_theta_1 - cos_theta) / delt
-    cos_grad_val = cos_grad(cos_theta, bond_vec_j, bond_vec_k)
-    assert(np.isclose(cos_delt_1, cos_grad_val[0, coord_1]))
-
-    # perturb environment atom
-    pos_delt_2 = deepcopy(positions)
-    pert_atom = np.random.randint(1, 3)
-    coord_2 = np.random.randint(0, 3)
-    pos_delt_2[pert_atom, coord_2] += delt
-    structure_2 = struc.Structure(cell, species, pos_delt_2)
-    test_env_2 = env.AtomicEnvironment(structure_2, 0, cutoffs,
-                                       compute_angles=True)
-
-    cos_theta_2 = test_env_2.cos_thetas[0, 1]
-    cos_delt_2 = (cos_theta_2 - cos_theta) / delt
-    print(cos_delt_2)
-    print(cos_grad_val)
-
-    assert(np.isclose(cos_delt_2, cos_grad_val[pert_atom, coord_2]))
+    pass
