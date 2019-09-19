@@ -3,6 +3,7 @@ import numpy as np
 from flare import env, struc
 from flare.struc import Structure
 from flare.env import AtomicEnvironment
+from copy import deepcopy
 
 
 def test_species_count():
@@ -62,4 +63,4 @@ def test_cos():
 
     ang = np.dot(atom1_rel, atom2_rel) / (atom1_dist * atom2_dist)
 
-    assert(np.isclose(ang, test_env.cos_thetas[atom1, atom2]))
+    assert(np.isclose(ang, test_env.cos_thetas[atom1-1, atom2-1]))
