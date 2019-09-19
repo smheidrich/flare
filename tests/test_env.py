@@ -56,11 +56,9 @@ def test_cos():
     atom1 = 1
     atom2 = 3
 
-    atom1_rel = positions[atom1] - positions[0]
-    atom1_dist = np.linalg.norm(atom1_rel)
-    atom2_rel = positions[atom2] - positions[0]
-    atom2_dist = np.linalg.norm(atom2_rel)
+    atom1_rel = test_env.bond_array_2[atom1, 1:]
+    atom2_rel = test_env.bond_array_2[atom2, 1:]
 
-    ang = np.dot(atom1_rel, atom2_rel) / (atom1_dist * atom2_dist)
+    ang = np.dot(atom1_rel, atom2_rel)
 
-    assert(np.isclose(ang, test_env.cos_thetas[atom1-1, atom2-1]))
+    assert(np.isclose(ang, test_env.cos_thetas[atom1, atom2]))
