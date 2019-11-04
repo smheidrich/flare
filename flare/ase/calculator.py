@@ -1,6 +1,7 @@
 """:class:`FLARE_Calculator` is a calculator compatible with `ASE`. You can build up `ASE Atoms` for your atomic structure, and use `get_forces`, `get_potential_energy` as general `ASE Calculators`, and use it in `ASE Molecular Dynamics` and our `ASE OTF` training module."""
 import numpy as np
 import multiprocessing as mp
+from multiprocessing import shared_memory
 from flare.env import AtomicEnvironment
 from flare.struc import Structure
 from flare.mgp.mgp import MappedGaussianProcess
@@ -26,6 +27,9 @@ class FLARE_Calculator(Calculator):
         self.gp_model = gp_model
         self.use_mapping = use_mapping
         self.par = par
+        if self.par:
+            self.shared_means = []
+            self.shared_vars = []
         self.results = {}
 
     def get_potential_energy(self, atoms=None, force_consistent=False):
@@ -164,6 +168,35 @@ class FLARE_Calculator(Calculator):
                         grid_params, struc_params, mean_only,
                         container_only, self.gp_model, lmp_file_name)
 
+#        if self.par:
+#            if (len(self.shared_means) != 0) and (len(self.shared_vars) != 0):
+#               # release shared memory 
+#
+#            shared_means = [[], []]
+#            shared_vars = [[], []]
+#            body_maps = [self.mgp_model.maps_2, self.mgp_model.maps_3]
+#            for b in range(2):
+#                for ind, spc in enumerate(self.mgp_model.spcs[b]):
+#                    shm_name = create_shared_array(\
+#                            body_maps[b][ind].mean.__coeffs__)
+#                    shared_means[b].append(shm_name)
+#    
+#                for ind, spc in enumerate(self.mgp_model.spcs[b]):
+#                    n_var = len(body_maps[b][ind].var.models)
+#                    shared_vars[b].append([])
+#                    for i in range(n_var):
+#                        shm_name = create_shared_array(\
+#                            body_maps[b][ind].var.models[i].__coeffs__)
+#                        shared_vars[b][-1].append(shm_name)
+
+
+def create_shared_array(a):
+    shm = shared_memory.SharedMemory(create=True, size=a.nbytes)
+    b = np.ndarray(a.shape, dtype=a.dtype, buffer=shm.buf)
+    b[:] = a[:]
+    shm_name = shm.name
+    shm.close()
+    return shm_name
 
 
 #from ase import io

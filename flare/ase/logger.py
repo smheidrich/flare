@@ -172,10 +172,6 @@ class OTFLogger(MDLogger):
         self.logfile.write('\n')
         self.logfile.flush()
 
-    def add_atom_info(self, target_atom, uncertainty):
-        self.logfile.write('\nAdding atom {} to the training set with'
-                           'uncertainty: '.format(uncertainty))
-
     def write_mgp_train(self, mgp_model, train_time):
         train_size = len(mgp_model.GP.training_data)
         self.logfile.write('\ntraining set size: {}\n'.format(train_size))
