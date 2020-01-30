@@ -35,8 +35,8 @@ lower_cut = 2.5
 grid_num_2 = 8
 grid_num_3 = 8
 grid_params = {'bounds_2': [[lower_cut], [two_cut]],
-               'bounds_3': [[lower_cut, lower_cut, 0],
-                            [three_cut, three_cut, np.pi]],
+               'bounds_3': [[lower_cut, lower_cut, -1],
+                            [three_cut, three_cut,  1]],
                'grid_num_2': grid_num_2,
                'grid_num_3': [grid_num_3, grid_num_3, grid_num_3],
                'svd_rank_2': 0,
@@ -47,7 +47,7 @@ grid_params = {'bounds_2': [[lower_cut], [two_cut]],
 
 mgp_model = MappedGaussianProcess(gp_model.hyps, gp_model.cutoffs,
             grid_params, struc_params, mean_only=False, container_only=False,
-            GP=gp_model, lmp_file_name='agi.mgp')
+            GP=gp_model, lmp_file_name='lmp.mgp')
 
 # ------------ create ASE's flare calculator -----------------------
 flare_calc = FLARE_Calculator(gp_model, mgp_model, par=True, use_mapping=True)
