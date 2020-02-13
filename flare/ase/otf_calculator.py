@@ -120,7 +120,7 @@ class OTF_Calculator(Calculator):
         if not self.flare_calc.gp_model.training_data:
             self.dft_count = 0
             self.stds = np.zeros((self.noa, 3))
-            dft_forces = self.call_DFT()
+            dft_forces = self.call_DFT(["forces"])
             self._f = dft_forces
    
             # update gp model
@@ -180,7 +180,7 @@ class OTF_Calculator(Calculator):
         if not self.std_in_bound:
             # call dft/eam
             print('calling dft')
-            dft_forces = self.call_DFT()
+            dft_forces = self.call_DFT(properties)
 
             # update gp
             print('updating gp')
@@ -190,12 +190,15 @@ class OTF_Calculator(Calculator):
         """never actually called yet... just for documentation's sake"""
         self.observers[self.logger_ind][0].run_complete()
     
-    def call_DFT(self):
+    def call_DFT(self, properties):
         prev_calc = self.atoms.calc
         calc = deepcopy(self.dft_calc)
         self.atoms.set_calculator(calc)
         forces = self.atoms.get_forces()
-        self.results = calc.results.copy()
+        self.results = {
+            prop: self.atoms.calc.get_property(prop, allow_calculation=False)
+            for prop in properties
+        }
         print("dft done")
         self.call_observers()
         self.atoms.set_calculator(prev_calc)
