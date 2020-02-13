@@ -7,6 +7,7 @@ from ase.md import MDLogger
 from ase import units
 
 from flare.ase.calculator import FLARE_Calculator
+from flare.ase.otf_calculator import OTF_Calculator
 
 
 class OTFLogger(MDLogger):
@@ -40,7 +41,12 @@ class OTFLogger(MDLogger):
         self.data_in_logfile = data_in_logfile
 
     def write_header_info(self):
-        gp_model = self.atoms.calc.gp_model
+        if isinstance(self.atoms.calc, FLARE_Calculator):
+            gp_model = self.atoms.calc.gp_model
+        elif isinstance(self.atoms.calc, OTF_Calculator):
+            gp_model = self.atoms.calc.flare_calc.gp_model
+        else:
+            assert False, "this should never happen"
         self.logfile.write(str(datetime.datetime.now()))
         self.logfile.write('\nnumber of cpu cores: ')  # TODO
         self.logfile.write('\ncutoffs: '+str(gp_model.cutoffs))
@@ -49,8 +55,12 @@ class OTFLogger(MDLogger):
         self.logfile.write('\nhyperparameters: '+str(gp_model.hyps))
         self.logfile.write('\nhyperparameter optimization algorithm: ' +
                            gp_model.algo)
-        self.logfile.write('\nuncertainty tolerance: {} times noise'.format(
-                           str(self.dyn.std_tolerance_factor)))
+        if isinstance(self.atoms.calc, FLARE_Calculator):
+            self.logfile.write('\nuncertainty tolerance: {} times noise'.format(
+                               str(self.dyn.std_tolerance_factor)))
+        elif isinstance(self.atoms.calc, OTF_Calculator):
+            self.logfile.write('\nuncertainty tolerance: {} times noise'.format(
+                               str(self.atoms.calc.std_tolerance_factor)))
         self.logfile.write('\ntimestep (ps): {}'.format(self.dyn.dt/1000))
         self.logfile.write('\nnumber of frames: {}'.format(0))
         self.logfile.write('\nnumber of atoms: {}'.format(
@@ -98,10 +108,17 @@ class OTFLogger(MDLogger):
 
         species = self.atoms.get_chemical_symbols()
         positions = self.atoms.get_positions()
+        print("before getting forces in write_datafiles")
         forces = self.atoms.get_forces()
+        print("after getting forces in write_datafiles")
         if type(self.atoms.calc) == FLARE_Calculator: 
             velocities = self.atoms.get_velocities()
             stds = self.atoms.get_uncertainties(self.atoms)
+            data_files = self.traj_files
+            data = [positions, velocities, forces, stds]
+        elif type(self.atoms.calc) == OTF_Calculator:
+            velocities = self.atoms.get_velocities()
+            stds = self.atoms.calc.flare_calc.get_uncertainties(self.atoms)
             data_files = self.traj_files
             data = [positions, velocities, forces, stds]
         else:
@@ -126,7 +143,7 @@ class OTFLogger(MDLogger):
         if self.dyn is not None:
             steps = self.dyn.nsteps
             t = steps / 1000
-            if type(self.atoms.calc) != FLARE_Calculator: 
+            if type(self.atoms.calc) not in [FLARE_Calculator, OTF_Calculator]:
                 self.logfile.write('\n*-Frame: '+str(steps))
             else:
                 self.logfile.write('\n-Frame: '+str(steps))
@@ -154,10 +171,15 @@ class OTFLogger(MDLogger):
         # add positions, forces and stds to be written
         species = self.atoms.get_chemical_symbols()
         positions = self.atoms.get_positions()
+        print("before getting forces in write_data_to_logfile")
         forces = self.atoms.get_forces()
+        print("after getting forces in write_data_to_logfile")
         velocities = self.atoms.get_velocities()
         if type(self.atoms.calc) == FLARE_Calculator: 
             stds = self.atoms.get_uncertainties(self.atoms)
+            force_str = 'GP  Forces'
+        elif type(self.atoms.calc) == OTF_Calculator: 
+            stds = self.atoms.calc.flare_calc.get_uncertainties(self.atoms)
             force_str = 'GP  Forces'
         else:
             stds = np.zeros(positions.shape)

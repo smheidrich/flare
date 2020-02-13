@@ -235,8 +235,8 @@ class GaussianProcess:
         k_v = self.get_kernel_vector(x_t, d)
 
         # Guarantee that alpha is up to date with training set
-        assert ((self.alpha is not None) and
-                (3 * len(self.training_data) == len(self.alpha)))
+        assert self.alpha is not None
+        assert 3 * len(self.training_data) == len(self.alpha)
 
         # get predictive mean
         pred_mean = np.matmul(k_v, self.alpha)

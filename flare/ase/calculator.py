@@ -20,6 +20,8 @@ class FLARE_Calculator(Calculator):
     :type use_mapping: Bool
     """
 
+    implemented_properties = [ "forces", "stress", "energy", "stds" ]
+
     def __init__(self, gp_model, mgp_model=None, par=False, use_mapping=False):
         super().__init__() # all set to default values, TODO: change
         self.mgp_model = mgp_model
@@ -28,12 +30,12 @@ class FLARE_Calculator(Calculator):
         self.par = par
         self.results = {}
 
-    def get_property(self, name, atoms=None, allow_calculation=True):
-        if name not in self.results.keys():
-            if not allow_calculation:
-                return None
-            self.calculate(atoms)
-        return self.results[name]
+    # def get_property(self, name, atoms=None, allow_calculation=True):
+        # if name not in self.results.keys():
+            # if not allow_calculation:
+                # return None
+            # self.calculate(atoms)
+        # return self.results[name]
 
 
     def get_potential_energy(self, atoms=None, force_consistent=False):
@@ -42,8 +44,8 @@ class FLARE_Calculator(Calculator):
         return self.get_property('energy', atoms)
                                                  
                                                  
-    def get_forces(self, atoms):                 
-        return self.get_property('forces', atoms)
+    # def get_forces(self, atoms):                 
+        # return self.get_property('forces', atoms)
 
 
     def get_stress(self, atoms):
@@ -56,7 +58,7 @@ class FLARE_Calculator(Calculator):
         return self.get_property('stds', atoms)
 
 
-    def calculate(self, atoms):
+    def calculate(self, atoms, *args):
         '''
         calculate properties including: energy, local energies, forces, stress, uncertainties
 
