@@ -108,9 +108,7 @@ class OTFLogger(MDLogger):
 
         species = self.atoms.get_chemical_symbols()
         positions = self.atoms.get_positions()
-        print("before getting forces in write_datafiles")
         forces = self.atoms.get_forces()
-        print("after getting forces in write_datafiles")
         if type(self.atoms.calc) == FLARE_Calculator: 
             velocities = self.atoms.get_velocities()
             stds = self.atoms.get_uncertainties(self.atoms)
@@ -171,9 +169,7 @@ class OTFLogger(MDLogger):
         # add positions, forces and stds to be written
         species = self.atoms.get_chemical_symbols()
         positions = self.atoms.get_positions()
-        print("before getting forces in write_data_to_logfile")
         forces = self.atoms.get_forces()
-        print("after getting forces in write_data_to_logfile")
         velocities = self.atoms.get_velocities()
         if type(self.atoms.calc) == FLARE_Calculator: 
             stds = self.atoms.get_uncertainties(self.atoms)
