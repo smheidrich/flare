@@ -21,7 +21,6 @@ for md_engine in md_engines:
     
     # ----------- setup flare calculator ---------------
     flare_calc = deepcopy(flare_setup.flare_calc)
-    super_cell.set_calculator(flare_calc)
     
     # ----------- setup qe calculator --------------
     dft_calc = qe_setup.dft_calc
@@ -32,12 +31,13 @@ for md_engine in md_engines:
                  'externalstress': 0, 'ttime': 25, 'pfactor': 3375, 
                  'mask': None, 'temperature': 500, 'taut': 1, 'taup': 1,
                  'pressure': 0, 'compressibility': 0, 'fixcm': 1}
-    otf_params = {'dft_calc': dft_calc, 
+    otf_params = {'flare_calc': flare_calc,
+                  'dft_calc': dft_calc, 
                   'init_atoms': [0, 1, 2, 3],
                   'std_tolerance_factor': 1, 
                   'max_atoms_added' : len(super_cell.positions),
                   'freeze_hyps': 10, 
-                  'use_mapping': super_cell.calc.use_mapping}
+                  'use_mapping': flare_calc.use_mapping}
    
     # intialize velocity
     temperature = md_params['temperature']
@@ -48,8 +48,8 @@ for md_engine in md_engines:
     test_otf = otf_md(md_engine, super_cell, md_params, otf_params)
 
     # set up logger
-    test_otf.attach(OTFLogger(test_otf, super_cell, 
-        logfile=md_engine+'.log', mode="w"), interval=1)
+    test_otf.atoms.calc.observers.append((OTFLogger(test_otf, super_cell, 
+        logfile=md_engine+'.log', mode="w"),))
     
     # run otf
     number_of_steps = 3

@@ -5,7 +5,7 @@ Please see the function `otf_md` below for usage
 import os
 import sys
 from flare.struc import Structure
-from flare.ase.otf import OTF
+from flare.ase.otf_calculator import OTF_Calculator
 
 import numpy as np
 from ase.calculators.espresso import Espresso
@@ -17,118 +17,6 @@ from ase.md.verlet import VelocityVerlet
 from ase.md.md import MolecularDynamics
 from ase.md.langevin import Langevin
 from ase import units
-
-class OTF_VelocityVerlet(VelocityVerlet, OTF):
-    """
-    On-the-fly training with ASE's VelocityVerlet molecular dynamics engine.
-    Inherit from ASE `VelocityVerlet <https://wiki.fysik.dtu.dk/ase/ase/md.html#ase.md.verlet.VelocityVerlet>`_ class and our ASE-coupled on-the-fly training engine `flare.ase.OTF`
-
-    Args: 
-        atoms, timestep, trajectory, dt:
-            see `VelocityVerlet <https://wiki.fysik.dtu.dk/ase/ase/md.html#ase.md.verlet.VelocityVerlet>`_
-        kwargs: same parameters as :class:`flare.ase.OTF`
-    """
-
-    def __init__(self, atoms, timestep=None, trajectory=None, dt=None, 
-                 **kwargs):
-
-        VelocityVerlet.__init__(self, atoms, timestep, trajectory, dt=dt)
-        OTF.__init__(self, **kwargs)
-        
-        self.md_engine = 'VelocityVerlet'
-
-class OTF_NVTBerendsen(NVTBerendsen, OTF):
-    """
-    On-the-fly training with ASE's NVTBerendsen molecular dynamics engine. \
-    Inherit from ASE `NVTBerendsen <https://wiki.fysik.dtu.dk/ase/ase/md.html#module-ase.md.nvtberendsen>`_ class and our ASE-coupled on-the-fly training engine `flare.ase.OTF`
-
-    Args:
-        atoms, timestep, temperature, taut, fixcm: see\
-            `NVTBerendsen <https://wiki.fysik.dtu.dk/ase/ase/md.html#module-ase.md.nvtberendsen>`_.
-        kwargs: same parameters as :class:`flare.ase.OTF`
-    """
-
-
-    def __init__(self, atoms, timestep, temperature, taut, fixcm=True,
-                 trajectory=None, **kwargs):
-
-        NVTBerendsen.__init__(self, atoms, timestep, temperature, taut, 
-                              fixcm, trajectory)
- 
-        OTF.__init__(self, **kwargs)
-
-        self.md_engine = 'NVTBerendsen'
-
-class OTF_NPTBerendsen(NPTBerendsen, OTF):
-    """
-    On-the-fly training with ASE's Langevin molecular dynamics engine. \
-    Inherit from ASE `Langevin <https://wiki.fysik.dtu.dk/ase/ase/md.html#ase.md.langevin.Langevin>`_ class and our ASE-coupled on-the-fly training engine `flare.ase.OTF`
-
-    Args:
-        atoms, timestep, temperature, taut, pressure, taup, compressibility, fixcm:\
-            see `NPTBerendsen <https://wiki.fysik.dtu.dk/ase/ase/md.html#module-ase.md.nptberendsen>`_.
-        kwargs: same parameters as :class:`flare.ase.OTF`
-    """
-
-
-    def __init__(self, atoms, timestep, temperature, taut=0.5e3,
-                 pressure=1.01325, taup=1e3,
-                 compressibility=4.57e-5, fixcm=True, trajectory=None,
-                 **kwargs):
-
-        NPTBerendsen.__init__(self, atoms, timestep, temperature, taut,
-                              pressure, taup,
-                              compressibility, fixcm, trajectory)
-
-        OTF.__init__(self, **kwargs)
-
-        self.md_engine = 'NPTBerendsen'
-
-class OTF_NPT(NPT, OTF):
-    """
-    On-the-fly training with ASE's Langevin molecular dynamics engine. \
-    Inherit from ASE `NPT <https://wiki.fysik.dtu.dk/ase/ase/md.html#module-ase.md.npt>`_ class and our ASE-coupled on-the-fly training engine `flare.ase.OTF`
-
-    Args:
-        atoms, timestep, temperature, friction:\
-            see `NPT <https://wiki.fysik.dtu.dk/ase/ase/md.html#module-ase.md.npt>`_
-        kwargs: same parameters as :class:`flare.ase.OTF`
-    """
-
-
-    def __init__(self, atoms, timestep, temperature, externalstress, 
-            ttime, pfactor, mask=None, trajectory=None, **kwargs):
-
-        NPT.__init__(self, atoms, timestep, temperature,
-                     externalstress, ttime, pfactor, mask,
-                     trajectory)
-
-        OTF.__init__(self, **kwargs)
-
-        self.md_engine = 'NPT'
-
-class OTF_Langevin(Langevin, OTF):
-    """
-    On-the-fly training with ASE's Langevin molecular dynamics engine. \
-    Inherit from ASE `Langevin <https://wiki.fysik.dtu.dk/ase/ase/md.html#ase.md.langevin.Langevin>`_ class and our ASE-coupled on-the-fly training engine `flare.ase.OTF`
-
-    Args:
-        atoms, timestep, temperature, friction:\
-            see `Langevin <https://wiki.fysik.dtu.dk/ase/ase/md.html#ase.md.langevin.Langevin>`_.
-        kwargs: same parameters as :class:`flare.ase.OTF`
-    """
-
-    def __init__(self, atoms, timestep=None, temperature=None, friction=None, 
-                 fixcm=True, trajectory=None, **kwargs):
-
-        Langevin.__init__(self, atoms, timestep, temperature, friction, 
-                          fixcm, trajectory)
-
-        OTF.__init__(self, **kwargs)
-        
-        self.md_engine = 'Langevin'
-
-
 
 def otf_md(md_engine: str, atoms, md_params: dict, otf_params: dict):
     '''
@@ -170,28 +58,32 @@ def otf_md(md_engine: str, atoms, md_params: dict, otf_params: dict):
     timestep = md['timestep']
     trajectory = md['trajectory']
 
+    calc = OTF_Calculator(**otf_params)
+    atoms.set_calculator(calc)
+
     if md_engine == 'VelocityVerlet':
-        return OTF_VelocityVerlet(atoms, timestep, trajectory, dt=md['dt'],
-                **otf_params)
+        md_obj = VelocityVerlet(atoms, timestep, trajectory, dt=md['dt'])
        
     elif md_engine == 'NVTBerendsen':
-        return OTF_NVTBerendsen(atoms, timestep, md['temperature'], 
-                md['taut'], md['fixcm'], trajectory, **otf_params)
+        md_obj = NVTBerendsen(atoms, timestep, md['temperature'], 
+                md['taut'], md['fixcm'], trajectory)
     
     elif md_engine == 'NPTBerendsen':
-        return OTF_NPTBerendsen(atoms, timestep, md['temperature'], 
+        md_obj = NPTBerendsen(atoms, timestep, md['temperature'], 
                 md['taut'], md['pressure'], md['taup'], 
-                md['compressibility'], md['fixcm'], trajectory, **otf_params)
+                md['compressibility'], md['fixcm'], trajectory)
 
     elif md_engine == 'NPT':
-        return OTF_NPT(atoms, timestep, md['temperature'],
+        md_obj = NPT(atoms, timestep, md['temperature'],
                 md['externalstress'], md['ttime'], md['pfactor'], 
-                md['mask'], trajectory, **otf_params)
+                md['mask'], trajectory)
 
     elif md_engine == 'Langevin':
-        return OTF_Langevin(atoms, timestep, md['temperature'],
-                md['friction'], md['fixcm'], trajectory, **otf_params)
+        md_obj = Langevin(atoms, timestep, md['temperature'],
+                md['friction'], md['fixcm'], trajectory)
 
     else:
         raise NotImplementedError(md_engine+' is not implemented')
 
+    atoms.calc.md = md_obj # actually only required if MGP is used
+    return md_obj

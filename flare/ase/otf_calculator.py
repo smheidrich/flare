@@ -50,6 +50,8 @@ class OTF_Calculator(Calculator):
         two_d (bool): used in the calculation of l_bound. If 2-D material is 
             considered, set to True, then the atomic environment construction 
             will only search the x & y periodic boundaries to save time
+        md (ASE MolecularDynamics): md object to get time from (only required
+            if MGP is used)
     """
 
 
@@ -73,7 +75,7 @@ class OTF_Calculator(Calculator):
             max_atoms_added=1, freeze_hyps=1, restart_from=None,
             # mgp parameters
             use_mapping: bool=False, non_mapping_steps: list=[],
-            l_bound: float=None, two_d: bool=False):
+            l_bound: float=None, two_d: bool=False, md=None):
 
         super().__init__(atoms=atoms)
 
@@ -84,21 +86,25 @@ class OTF_Calculator(Calculator):
 
         if dft_count is None:
             self.dft_count = 0
+
+        self.observers = []
+
+    def init_calculate(self):
+        # stuff that was formerly in __init__
         self.noa = len(self.atoms.positions)
 
         # initialize local energies
-        if calculate_energy:
+        if self.calculate_energy:
             self.local_energies = np.zeros(self.noa)
         else:
             self.local_energies = None
 
         # initialize otf
-        if init_atoms is None:
+        if self.init_atoms is None:
             self.init_atoms = [int(n) for n in range(self.noa)]
 
-        self.observers = []
+        # /
 
-    def init_calculate(self):
         # observers
         for i, obs in enumerate(self.observers):
             if obs[0].__class__.__name__ == "OTFLogger":
@@ -249,7 +255,7 @@ class OTF_Calculator(Calculator):
 
         # build mgp
         if self.use_mapping:
-            if self.get_time() in self.non_mapping_steps:
+            if self.md.get_time() in self.non_mapping_steps:
                 skip = True
 
             calc.build_mgp(skip)

@@ -23,7 +23,6 @@ def otf_md_test(md_engine):
     
     # ----------- setup flare calculator ---------------
     flare_calc = deepcopy(flare_setup.flare_calc)
-    super_cell.set_calculator(flare_calc)
     
     # ----------- setup qe calculator --------------
     dft_calc = qe_setup.dft_calc
@@ -35,12 +34,13 @@ def otf_md_test(md_engine):
                  'mask': None, 'temperature': 500, 'taut': 1, 'taup': 1,
                  'pressure': 0, 'compressibility': 0, 'fixcm': 1, 
                  'friction': 0.02}
-    otf_params = {'dft_calc': dft_calc, 
+    otf_params = {'flare_calc': flare_calc,
+                  'dft_calc': dft_calc, 
                   'init_atoms': [0, 1, 2, 3],
                   'std_tolerance_factor': 2, 
                   'max_atoms_added' : len(super_cell.positions),
                   'freeze_hyps': 10, 
-                  'use_mapping': super_cell.calc.use_mapping}
+                  'use_mapping': flare_calc.use_mapping}
    
     # intialize velocity
     temperature = md_params['temperature']
@@ -55,11 +55,12 @@ def otf_md_test(md_engine):
     # set up logger
     otf_logger = OTFLogger(test_otf, super_cell, 
         logfile=md_engine+'.log', mode="w", data_in_logfile=True) 
-    test_otf.attach(otf_logger, interval=1)
+    test_otf.atoms.calc.observers.append((otf_logger,))
+    # test_otf.attach(otf_logger, interval=1)
     
     # run otf
     number_of_steps = 3
-    test_otf.otf_run(number_of_steps)
+    test_otf.run(number_of_steps)
 
     os.system('rm {}.log'.format(md_engine)) 
     os.system('rm AgI.pw*')
